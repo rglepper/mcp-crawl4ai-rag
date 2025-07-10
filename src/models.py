@@ -141,3 +141,16 @@ class TemporaryAnalysisSearchRequest(BaseModel):
     analysis_id: str = Field(..., description="Analysis ID to search within")
     search_query: str = Field(..., description="Search query")
     search_type: str = Field(default="all", description="Type of search (all, classes, methods, etc.)")
+
+
+# Application Context Models
+class Crawl4AIContext(BaseModel):
+    """Context model containing all application dependencies."""
+    crawler: Any = Field(..., description="AsyncWebCrawler instance")
+    supabase_client: Any = Field(..., description="Supabase client instance")
+    reranking_model: Optional[Any] = Field(None, description="Cross-encoder reranking model")
+    neo4j_driver: Optional[Any] = Field(None, description="Neo4j async driver")
+    settings: Any = Field(..., description="Application settings")
+
+    class Config:
+        arbitrary_types_allowed = True
