@@ -1,6 +1,8 @@
 .env
 .venv
-__pycache__
+__pycache__/
+*/__pycache__/
+**/__pycache__/
 crawl4ai_mcp.egg-info
 repos
 temp_analysis
