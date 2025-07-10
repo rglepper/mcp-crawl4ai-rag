@@ -126,3 +126,18 @@ class HallucinationResult(BaseModel):
     issues: List[Dict[str, Any]] = Field(default_factory=list, description="List of detected issues")
     recommendations: List[str] = Field(default_factory=list, description="List of recommendations")
     error: Optional[str] = Field(default=None, description="Error message if detection failed")
+
+
+# Temporary Analysis Models
+class TemporaryAnalysisRequest(BaseModel):
+    """Request model for temporary repository analysis operations."""
+    repo_url: str = Field(..., description="GitHub repository URL to analyze")
+    focus_areas: Optional[List[str]] = Field(default=None, description="Optional list of areas to focus on")
+    include_tests: bool = Field(default=False, description="Whether to include test files in analysis")
+
+
+class TemporaryAnalysisSearchRequest(BaseModel):
+    """Request model for searching temporary analysis data."""
+    analysis_id: str = Field(..., description="Analysis ID to search within")
+    search_query: str = Field(..., description="Search query")
+    search_type: str = Field(default="all", description="Type of search (all, classes, methods, etc.)")
