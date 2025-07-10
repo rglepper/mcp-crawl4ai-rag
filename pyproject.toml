@@ -20,3 +20,10 @@ dependencies = [
     "ipython>=9.4.0",
     "pydantic-settings>=2.9.1",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["src"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-v --tb=short"
