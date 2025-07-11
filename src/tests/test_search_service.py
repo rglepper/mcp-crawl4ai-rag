@@ -4,9 +4,7 @@ Tests for the SearchService class.
 Following TDD principles - these tests define the expected behavior
 of the SearchService before implementation.
 """
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from typing import List, Dict, Any, Optional
+from unittest.mock import Mock, patch
 
 
 def create_mock_settings():

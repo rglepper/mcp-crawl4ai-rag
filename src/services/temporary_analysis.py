@@ -9,10 +9,9 @@ import logging
 import os
 import shutil
 import subprocess
-import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 
 from src.config import Settings
 from src.models import TemporaryAnalysisRequest, TemporaryAnalysisSearchRequest

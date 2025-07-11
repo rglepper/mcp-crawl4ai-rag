@@ -5,9 +5,7 @@ This module tests all web crawling functionality including URL detection,
 sitemap parsing, content chunking, and various crawling strategies.
 """
 import pytest
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from typing import List, Dict, Any
-from pathlib import Path
+from unittest.mock import Mock, AsyncMock, patch
 
 from src.services.web_crawling import WebCrawlingService
 from src.models import CrawlRequest, CrawlResult, CrawlType

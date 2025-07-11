@@ -5,7 +5,6 @@ This module provides MCP tool wrappers for search operations including
 RAG queries and code example searches.
 """
 import json
-from typing import Any
 
 from mcp.server.fastmcp import Context
 

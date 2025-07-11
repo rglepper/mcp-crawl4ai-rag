@@ -5,8 +5,7 @@ This module tests all knowledge graph functionality including script analysis,
 hallucination detection, Neo4j parsing, graph validation, and report generation.
 """
 import pytest
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from typing import List, Dict, Any
+from unittest.mock import Mock, AsyncMock, patch
 from pathlib import Path
 
 from src.services.script_analyzer import ScriptAnalyzerService

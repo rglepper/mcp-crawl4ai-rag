@@ -5,7 +5,6 @@ This module provides MCP tool wrappers for web crawling operations including
 single page crawling, smart URL crawling, and local directory ingestion.
 """
 import json
-from typing import Any
 
 from mcp.server.fastmcp import Context
 

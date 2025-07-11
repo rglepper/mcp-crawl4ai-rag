@@ -5,9 +5,7 @@ Following TDD principles - these tests define the expected behavior
 of the EmbeddingService before implementation.
 """
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from typing import List, Dict, Any, Tuple
-import openai
+from unittest.mock import Mock, patch
 
 
 def create_mock_settings():

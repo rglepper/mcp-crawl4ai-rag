@@ -6,7 +6,6 @@ delegate to the appropriate services and return correctly formatted responses.
 """
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
-from typing import Dict, Any
 import json
 
 from src.tools.crawling_tools import (

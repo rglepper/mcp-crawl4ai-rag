@@ -102,23 +102,7 @@ class SourceCleanupRequest(BaseModel):
     confirm: bool = Field(default=False, description="Confirmation flag for deletion")
 
 
-# Hallucination Detection Models
-class HallucinationDetectionRequest(BaseModel):
-    """Request model for hallucination detection operations."""
-    script_path: Path = Field(..., description="Path to the Python script to analyze")
-    include_suggestions: bool = Field(default=True, description="Whether to include suggestions in results")
-    confidence_threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="Minimum confidence threshold")
 
-
-class HallucinationResult(BaseModel):
-    """Response model for hallucination detection operations."""
-    success: bool = Field(..., description="Whether the detection was successful")
-    script_path: str = Field(..., description="Path to the analyzed script")
-    total_issues: int = Field(default=0, ge=0, description="Total number of issues found")
-    confidence_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Overall confidence score")
-    issues: List[Dict[str, Any]] = Field(default_factory=list, description="List of detected issues")
-    recommendations: List[str] = Field(default_factory=list, description="List of recommendations")
-    error: Optional[str] = Field(default=None, description="Error message if detection failed")
 
 
 # Temporary Analysis Models

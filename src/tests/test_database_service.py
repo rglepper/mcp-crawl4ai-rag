@@ -5,8 +5,7 @@ Following TDD principles - these tests define the expected behavior
 of the DatabaseService before implementation.
 """
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from typing import List, Dict, Any, Optional
+from unittest.mock import Mock, patch
 from supabase import Client
 
 

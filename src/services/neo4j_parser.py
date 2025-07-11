@@ -4,14 +4,12 @@ Neo4j parser service for the Crawl4AI MCP server.
 This service handles parsing GitHub repositories and storing the extracted
 code structure (classes, methods, functions, imports) in Neo4j.
 """
-import asyncio
 import logging
 import os
 import subprocess
 import shutil
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Set
+from typing import List, Dict, Any, Set
 import ast
 
 from src.config import Settings

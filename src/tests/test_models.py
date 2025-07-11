@@ -6,9 +6,7 @@ of all Pydantic models before implementation.
 """
 import pytest
 from pathlib import Path
-from typing import List, Dict, Any, Optional
-from pydantic import ValidationError, HttpUrl
-from enum import Enum
+from pydantic import ValidationError
 
 
 def test_crawl_type_enum_has_correct_values():

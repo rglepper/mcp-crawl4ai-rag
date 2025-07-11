@@ -6,8 +6,7 @@ imports, class instantiations, method calls, and other code patterns.
 """
 import ast
 import logging
-from pathlib import Path
-from typing import Dict, List, Set, Any, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
 
 from src.config import Settings

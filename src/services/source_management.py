@@ -5,7 +5,7 @@ This service handles source management operations including cleanup,
 analysis, and knowledge base guide generation.
 """
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any
 
 from src.config import Settings
 from src.models import SourceCleanupRequest

@@ -5,7 +5,6 @@ This module provides MCP tool wrappers for source management operations includin
 source cleanup, crawl type analysis, knowledge base guide generation, and source listing.
 """
 import json
-from typing import Any
 
 from mcp.server.fastmcp import Context
 

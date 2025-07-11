@@ -5,7 +5,7 @@ This service orchestrates the detection of AI coding assistant hallucinations
 by combining AST analysis, knowledge graph validation, and reporting.
 """
 import logging
-from typing import Dict, List, Any, Optional
+from typing import List
 from pathlib import Path
 
 from src.config import Settings

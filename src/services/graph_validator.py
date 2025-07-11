@@ -5,7 +5,7 @@ This service validates AI-generated code against the Neo4j knowledge graph
 to detect hallucinations in imports, method calls, attributes, and parameters.
 """
 import logging
-from typing import Dict, List, Optional, Set, Tuple, Any
+from typing import Dict, List, Optional, Set, Any
 from dataclasses import dataclass, field
 from enum import Enum
 

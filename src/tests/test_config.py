@@ -6,7 +6,6 @@ of the Settings class before implementation.
 """
 import pytest
 import os
-from pathlib import Path
 from unittest.mock import patch
 from pydantic import ValidationError
 

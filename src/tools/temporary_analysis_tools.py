@@ -5,7 +5,6 @@ This module provides MCP tool wrappers for temporary repository analysis operati
 including repository analysis, search, listing, and cleanup.
 """
 import json
-from typing import Any
 
 from mcp.server.fastmcp import Context
 
