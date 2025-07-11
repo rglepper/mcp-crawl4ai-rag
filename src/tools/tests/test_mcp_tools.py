@@ -139,11 +139,16 @@ class TestCrawlingTools:
         assert result_data["crawl_type"] == "sitemap"
         assert result_data["pages_crawled"] == 10
 
-    @patch('src.tools.crawling_tools.DirectoryIngestionService')
+    @patch('src.services.directory_ingestion.DirectoryIngestionService')
     async def test_ingest_local_directory_success(self, mock_service_class, mock_context):
         """Test successful local directory ingestion."""
         mock_service = AsyncMock()
         mock_service_class.return_value = mock_service
+
+        # Mock the context structure
+        mock_context.request_context.lifespan_context.directory_ingestion_service = None
+        mock_context.request_context.lifespan_context.supabase_client = Mock()
+        mock_context.request_context.lifespan_context.settings = Mock()
 
         mock_result = {
             "success": True,
