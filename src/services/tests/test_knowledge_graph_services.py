@@ -14,7 +14,7 @@ from src.services.hallucination_detector import HallucinationDetectorService
 from src.services.neo4j_parser import Neo4jParserService
 from src.services.knowledge_graph import KnowledgeGraphService
 from src.services.report_generator import ReportGeneratorService
-from src.services.graph_validator import GraphValidatorService
+from src.services.graph_validator import GraphValidatorService, ValidationStatus
 from src.models import HallucinationDetectionRequest, HallucinationResult
 from src.config import Settings
 
@@ -258,11 +258,21 @@ class TestNeo4jParserService:
         repo_url = "https://github.com/test/repo.git"
 
         # Mock the parsing process
-        with patch.object(neo4j_parser_service, '_clone_repository') as mock_clone, \
+        with patch.object(neo4j_parser_service, '_clear_repository_data') as mock_clear, \
+             patch.object(neo4j_parser_service, '_clone_repository') as mock_clone, \
              patch.object(neo4j_parser_service, '_analyze_python_files') as mock_analyze, \
-             patch.object(neo4j_parser_service, '_store_in_neo4j') as mock_store:
+             patch.object(neo4j_parser_service, '_store_in_neo4j') as mock_store, \
+             patch.object(neo4j_parser_service, '_cleanup_repository') as mock_cleanup, \
+             patch('src.services.neo4j_parser.Path') as mock_path:
 
+            mock_clear.return_value = None
             mock_clone.return_value = "/tmp/test_repo"
+
+            # Mock Path and file discovery
+            mock_repo_path = Mock()
+            mock_repo_path.rglob.return_value = [Mock(name="test.py"), Mock(name="module.py")]
+            mock_path.return_value = mock_repo_path
+
             mock_analyze.return_value = [
                 {
                     "file_path": "test.py",
@@ -272,9 +282,12 @@ class TestNeo4jParserService:
                 }
             ]
             mock_store.return_value = {"nodes_created": 10, "relationships_created": 5}
+            mock_cleanup.return_value = None
 
             result = await neo4j_parser_service.parse_repository(repo_url)
 
+        if not result["success"]:
+            print(f"Test failed with error: {result.get('error', 'Unknown error')}")
         assert result["success"] is True
         assert result["repo_url"] == repo_url
         assert result["nodes_created"] == 10
@@ -326,7 +339,8 @@ class TestKnowledgeGraphService:
     async def test_query_classes_in_repository(self, knowledge_graph_service, mock_neo4j_driver):
         """Test querying classes in a specific repository."""
         mock_session = AsyncMock()
-        mock_neo4j_driver.session.return_value.__aenter__.return_value = mock_session
+        # Fix the mock setup to work with the async context manager
+        mock_neo4j_driver.session.return_value.session = mock_session
         mock_result = AsyncMock()
         mock_result.__aiter__.return_value = iter([
             {"name": "TestClass", "full_name": "module.TestClass"},
@@ -343,13 +357,16 @@ class TestKnowledgeGraphService:
     async def test_search_method(self, knowledge_graph_service, mock_neo4j_driver):
         """Test searching for methods in knowledge graph."""
         mock_session = AsyncMock()
-        mock_neo4j_driver.session.return_value.__aenter__.return_value = mock_session
+        # Fix the mock setup to work with the async context manager
+        mock_neo4j_driver.session.return_value.session = mock_session
         mock_result = AsyncMock()
         mock_result.__aiter__.return_value = iter([
             {
                 "class_name": "TestClass",
+                "class_full_name": "module.TestClass",
                 "method_name": "test_method",
                 "params_list": ["self", "param1"],
+                "params_detailed": None,
                 "return_type": "str"
             }
         ])
@@ -383,6 +400,8 @@ class TestReportGeneratorService:
         validation_result.analysis_result.imports = []
         validation_result.analysis_result.class_instantiations = []
         validation_result.analysis_result.method_calls = []
+        validation_result.analysis_result.function_calls = []
+        validation_result.analysis_result.attribute_accesses = []
 
         # Add validation lists that the report generator expects
         validation_result.import_validations = []
@@ -423,10 +442,24 @@ class TestReportGeneratorService:
         report = {
             "analysis_metadata": {
                 "script_path": "/test/script.py",
-                "analysis_timestamp": "2024-01-01T00:00:00Z"
+                "analysis_timestamp": "2024-01-01T00:00:00Z",
+                "total_imports": 5,
+                "total_class_instantiations": 2,
+                "total_method_calls": 10,
+                "total_function_calls": 3,
+                "total_attribute_accesses": 7
             },
-            "validation_summary": {"overall_confidence": 0.8},
-            "hallucinations_detected": []
+            "validation_summary": {
+                "overall_confidence": 0.8,
+                "total_validations": 10,
+                "valid_count": 8,
+                "invalid_count": 1,
+                "uncertain_count": 1,
+                "not_found_count": 0,
+                "hallucination_rate": 0.1
+            },
+            "hallucinations_detected": [],
+            "recommendations": ["Test recommendation"]
         }
 
         output_path = tmp_path / "test_report.md"
@@ -444,7 +477,8 @@ class TestGraphValidatorService:
     async def test_validate_imports(self, graph_validator_service, mock_neo4j_driver):
         """Test validation of import statements."""
         mock_session = AsyncMock()
-        mock_neo4j_driver.session.return_value.__aenter__.return_value = mock_session
+        # Fix the mock setup to work with the async context manager
+        mock_neo4j_driver.session.return_value.session = mock_session
         mock_result = AsyncMock()
         mock_result.single.return_value = {"exists": True}
         mock_session.run.return_value = mock_result
@@ -456,13 +490,14 @@ class TestGraphValidatorService:
 
         validation = await graph_validator_service.validate_import(import_info)
 
-        assert validation.status == "VALID"
+        assert validation.status == ValidationStatus.VALID
         assert validation.confidence > 0.5
 
     async def test_validate_method_call(self, graph_validator_service, mock_neo4j_driver):
         """Test validation of method calls."""
         mock_session = AsyncMock()
-        mock_neo4j_driver.session.return_value.__aenter__.return_value = mock_session
+        # Fix the mock setup to work with the async context manager
+        mock_neo4j_driver.session.return_value.session = mock_session
         mock_result = AsyncMock()
         mock_result.single.return_value = {
             "name": "test_method",
@@ -476,17 +511,19 @@ class TestGraphValidatorService:
         method_call.object_name = "obj"
         method_call.method_name = "test_method"
         method_call.args = ["value"]
+        method_call.kwargs = {}
         method_call.object_type = "TestClass"
 
         validation = await graph_validator_service.validate_method_call(method_call)
 
-        assert validation.status == "VALID"
+        assert validation.status == ValidationStatus.VALID
         assert validation.confidence > 0.5
 
     async def test_validate_nonexistent_method(self, graph_validator_service, mock_neo4j_driver):
         """Test validation of nonexistent method calls."""
         mock_session = AsyncMock()
-        mock_neo4j_driver.session.return_value.__aenter__.return_value = mock_session
+        # Fix the mock setup to work with the async context manager
+        mock_neo4j_driver.session.return_value.session = mock_session
         mock_result = AsyncMock()
         mock_result.single.return_value = None
         mock_session.run.return_value = mock_result
@@ -500,5 +537,5 @@ class TestGraphValidatorService:
 
         validation = await graph_validator_service.validate_method_call(method_call)
 
-        assert validation.status == "NOT_FOUND"
+        assert validation.status == ValidationStatus.NOT_FOUND
         assert validation.confidence < 0.5
