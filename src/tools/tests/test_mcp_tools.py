@@ -570,7 +570,7 @@ class TestTemporaryAnalysisTools:
             "files_removed": 3
         }
 
-        mock_service.cleanup_temporary_analysis.return_value = mock_result
+        mock_service.cleanup_all_temporary_analyses.return_value = mock_result
 
         result = await cleanup_temporary_analysis(
             mock_context,
