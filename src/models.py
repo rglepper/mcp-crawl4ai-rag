@@ -95,13 +95,6 @@ class KnowledgeGraphQuery(BaseModel):
     command: str = Field(..., min_length=1, description="Query command to execute")
 
 
-class TemporaryAnalysisRequest(BaseModel):
-    """Request model for temporary analysis search operations."""
-    analysis_id: str = Field(..., description="Analysis ID to search within")
-    search_query: str = Field(..., description="Search query")
-    search_type: str = Field(default="all", description="Type of search (all, classes, methods, etc.)")
-
-
 # Source Management Models
 class SourceCleanupRequest(BaseModel):
     """Request model for source cleanup operations."""
