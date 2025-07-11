@@ -66,6 +66,7 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[Crawl4AIContext]:
     reranking_model = None
     if settings.use_reranking:
         try:
+            print("Loading reranking model...")
             reranking_model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
             print("✓ Reranking model loaded")
         except Exception as e:
@@ -75,6 +76,7 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[Crawl4AIContext]:
     neo4j_driver = None
     if settings.enable_knowledge_graph and settings.neo4j_password:
         try:
+            print("Connecting to Neo4j...")
             neo4j_driver = AsyncGraphDatabase.driver(
                 settings.neo4j_uri,
                 auth=(settings.neo4j_user, settings.neo4j_password)
@@ -121,9 +123,7 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[Crawl4AIContext]:
 mcp = FastMCP(
     "mcp-crawl4ai-rag",
     description="MCP server for RAG and web crawling with Crawl4AI",
-    lifespan=crawl4ai_lifespan,
-    host=os.getenv("HOST", "0.0.0.0"),
-    port=int(os.getenv("PORT", "8051"))
+    lifespan=crawl4ai_lifespan
 )
 
 # Register crawling tools
@@ -155,7 +155,7 @@ mcp.tool()(cleanup_temporary_analysis)
 
 async def main():
     """Main entry point for the MCP server."""
-    transport = os.getenv("TRANSPORT", "sse")
+    transport = os.getenv("TRANSPORT", "stdio")
     if transport == 'sse':
         # Run the MCP server with sse transport
         await mcp.run_sse_async()
