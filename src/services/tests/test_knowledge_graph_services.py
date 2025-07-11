@@ -175,8 +175,18 @@ user = User(name="test", age=25)
         with patch.object(hallucination_detector_service, '_analyze_script') as mock_analyze, \
              patch.object(hallucination_detector_service, '_validate_against_graph') as mock_validate:
 
-            mock_analyze.return_value = Mock(errors=[])
-            mock_validate.return_value = Mock(overall_confidence=0.85, hallucinations_detected=[])
+            mock_analyze.return_value = Mock(
+                errors=[],
+                imports=[],
+                class_instantiations=[],
+                method_calls=[],
+                function_calls=[],
+                attribute_accesses=[]
+            )
+            mock_validate.return_value = Mock(
+                overall_confidence=0.85,
+                hallucinations_detected=[]
+            )
 
             result = await hallucination_detector_service.detect_hallucinations(request)
 
@@ -204,7 +214,14 @@ obj.nonexistent_method()
         with patch.object(hallucination_detector_service, '_analyze_script') as mock_analyze, \
              patch.object(hallucination_detector_service, '_validate_against_graph') as mock_validate:
 
-            mock_analyze.return_value = Mock(errors=[])
+            mock_analyze.return_value = Mock(
+                errors=[],
+                imports=[],
+                class_instantiations=[],
+                method_calls=[],
+                function_calls=[],
+                attribute_accesses=[]
+            )
             mock_validate.return_value = Mock(
                 overall_confidence=0.25,
                 hallucinations_detected=[
@@ -308,7 +325,8 @@ class TestKnowledgeGraphService:
 
     async def test_query_classes_in_repository(self, knowledge_graph_service, mock_neo4j_driver):
         """Test querying classes in a specific repository."""
-        mock_session = mock_neo4j_driver.session.return_value.__aenter__.return_value
+        mock_session = AsyncMock()
+        mock_neo4j_driver.session.return_value.__aenter__.return_value = mock_session
         mock_result = AsyncMock()
         mock_result.__aiter__.return_value = iter([
             {"name": "TestClass", "full_name": "module.TestClass"},
@@ -324,7 +342,8 @@ class TestKnowledgeGraphService:
 
     async def test_search_method(self, knowledge_graph_service, mock_neo4j_driver):
         """Test searching for methods in knowledge graph."""
-        mock_session = mock_neo4j_driver.session.return_value.__aenter__.return_value
+        mock_session = AsyncMock()
+        mock_neo4j_driver.session.return_value.__aenter__.return_value = mock_session
         mock_result = AsyncMock()
         mock_result.__aiter__.return_value = iter([
             {
@@ -364,6 +383,13 @@ class TestReportGeneratorService:
         validation_result.analysis_result.imports = []
         validation_result.analysis_result.class_instantiations = []
         validation_result.analysis_result.method_calls = []
+
+        # Add validation lists that the report generator expects
+        validation_result.import_validations = []
+        validation_result.class_validations = []
+        validation_result.method_validations = []
+        validation_result.attribute_validations = []
+        validation_result.function_validations = []
 
         report = report_generator_service.generate_comprehensive_report(validation_result)
 
@@ -417,7 +443,8 @@ class TestGraphValidatorService:
 
     async def test_validate_imports(self, graph_validator_service, mock_neo4j_driver):
         """Test validation of import statements."""
-        mock_session = mock_neo4j_driver.session.return_value.__aenter__.return_value
+        mock_session = AsyncMock()
+        mock_neo4j_driver.session.return_value.__aenter__.return_value = mock_session
         mock_result = AsyncMock()
         mock_result.single.return_value = {"exists": True}
         mock_session.run.return_value = mock_result
@@ -434,7 +461,8 @@ class TestGraphValidatorService:
 
     async def test_validate_method_call(self, graph_validator_service, mock_neo4j_driver):
         """Test validation of method calls."""
-        mock_session = mock_neo4j_driver.session.return_value.__aenter__.return_value
+        mock_session = AsyncMock()
+        mock_neo4j_driver.session.return_value.__aenter__.return_value = mock_session
         mock_result = AsyncMock()
         mock_result.single.return_value = {
             "name": "test_method",
@@ -457,7 +485,8 @@ class TestGraphValidatorService:
 
     async def test_validate_nonexistent_method(self, graph_validator_service, mock_neo4j_driver):
         """Test validation of nonexistent method calls."""
-        mock_session = mock_neo4j_driver.session.return_value.__aenter__.return_value
+        mock_session = AsyncMock()
+        mock_neo4j_driver.session.return_value.__aenter__.return_value = mock_session
         mock_result = AsyncMock()
         mock_result.single.return_value = None
         mock_session.run.return_value = mock_result

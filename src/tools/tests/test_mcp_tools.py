@@ -101,6 +101,10 @@ class TestCrawlingTools:
         mock_result = Mock()
         mock_result.success = False
         mock_result.url = "https://example.com"
+        mock_result.crawl_type = "single_page"
+        mock_result.pages_crawled = 0
+        mock_result.chunks_stored = 0
+        mock_result.code_examples_stored = 0
         mock_result.error = "Network error"
 
         mock_service.process_crawl_request.return_value = mock_result
@@ -123,6 +127,7 @@ class TestCrawlingTools:
         mock_result.crawl_type = "sitemap"
         mock_result.pages_crawled = 10
         mock_result.chunks_stored = 50
+        mock_result.code_examples_stored = 5
 
         mock_service.process_crawl_request.return_value = mock_result
 
