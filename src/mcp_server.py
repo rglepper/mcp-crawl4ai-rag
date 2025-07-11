@@ -42,14 +42,21 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[Crawl4AIContext]:
     Yields:
         Crawl4AIContext: The context containing all application dependencies
     """
-    settings = get_settings()
+    try:
+        print("🚀 Starting MCP server initialization...")
+        settings = get_settings()
+        print("✓ Settings loaded")
 
-    # Create browser configuration
-    browser_config = BrowserConfig(
-        browser_type="chromium",
-        headless=True,
-        verbose=False
-    )
+        # Create browser configuration
+        browser_config = BrowserConfig(
+            browser_type="chromium",
+            headless=True,
+            verbose=False
+        )
+        print("✓ Browser config created")
+    except Exception as e:
+        print(f"❌ Error during initial setup: {e}")
+        raise
 
     # Create crawler configuration (stored in lifespan context for tools to use)
     # crawler_config = CrawlerRunConfig(
@@ -58,9 +65,13 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[Crawl4AIContext]:
     # )
 
     # Initialize Supabase client
-    from supabase import create_client
-    supabase_client = create_client(settings.supabase_url, settings.supabase_service_key)
-    print("✓ Supabase client initialized")
+    try:
+        from supabase import create_client
+        supabase_client = create_client(settings.supabase_url, settings.supabase_service_key)
+        print("✓ Supabase client initialized")
+    except Exception as e:
+        print(f"❌ Error initializing Supabase: {e}")
+        raise
 
     # Initialize reranking model if enabled
     reranking_model = None
@@ -123,7 +134,9 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[Crawl4AIContext]:
 mcp = FastMCP(
     "mcp-crawl4ai-rag",
     description="MCP server for RAG and web crawling with Crawl4AI",
-    lifespan=crawl4ai_lifespan
+    lifespan=crawl4ai_lifespan,
+    host=os.getenv("HOST", "0.0.0.0"),
+    port=os.getenv("PORT", "8051")
 )
 
 # Register crawling tools
@@ -155,7 +168,7 @@ mcp.tool()(cleanup_temporary_analysis)
 
 async def main():
     """Main entry point for the MCP server."""
-    transport = os.getenv("TRANSPORT", "stdio")
+    transport = os.getenv("TRANSPORT", "sse")
     if transport == 'sse':
         # Run the MCP server with sse transport
         await mcp.run_sse_async()
