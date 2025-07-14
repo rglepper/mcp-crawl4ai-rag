@@ -73,6 +73,19 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[Crawl4AIContext]:
         print(f"❌ Error initializing Supabase: {e}")
         raise
 
+    # Initialize core services
+    print("Initializing core services...")
+
+    # Initialize database service
+    from src.services.database import DatabaseService
+    database_service = DatabaseService(settings)
+    print("✓ Database service initialized")
+
+    # Initialize embedding service
+    from src.services.embedding import EmbeddingService
+    embedding_service = EmbeddingService(settings)
+    print("✓ Embedding service initialized")
+
     # Initialize reranking model if enabled
     reranking_model = None
     if settings.use_reranking:
@@ -83,22 +96,88 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[Crawl4AIContext]:
         except Exception as e:
             print(f"Warning: Could not load reranking model: {e}")
 
-    # Initialize Neo4j driver if knowledge graph is enabled
+    # Initialize search service (depends on database and embedding services)
+    from src.services.rag_search import SearchService
+    search_service = SearchService(
+        settings=settings,
+        database_service=database_service,
+        embedding_service=embedding_service,
+        reranking_model=reranking_model
+    )
+    print("✓ Search service initialized")
+
+    # Initialize directory ingestion service
+    from src.services.directory_ingestion import DirectoryIngestionService
+    directory_ingestion_service = DirectoryIngestionService(supabase_client, settings)
+    print("✓ Directory ingestion service initialized")
+
+    # Initialize source management service
+    from src.services.source_management import SourceManagementService
+    source_management_service = SourceManagementService(supabase_client, settings)
+    print("✓ Source management service initialized")
+
+    # Initialize temporary analysis service
+    from src.services.temporary_analysis import TemporaryAnalysisService
+    temporary_analysis_service = TemporaryAnalysisService(settings)
+    print("✓ Temporary analysis service initialized")
+
+    # Initialize Neo4j driver and services if knowledge graph is enabled
     neo4j_driver = None
-    if settings.enable_knowledge_graph and settings.neo4j_password:
-        try:
-            print("Connecting to Neo4j...")
-            neo4j_driver = AsyncGraphDatabase.driver(
-                settings.neo4j_uri,
-                auth=(settings.neo4j_user, settings.neo4j_password)
-            )
-            # Test connection
-            async with neo4j_driver.session() as session:
-                await session.run("RETURN 1")
-            print("✓ Neo4j driver initialized")
-        except Exception as e:
-            print(f"Warning: Could not connect to Neo4j: {e}")
-            neo4j_driver = None
+    hallucination_detector_service = None
+    knowledge_graph_service = None
+    neo4j_parser_service = None
+
+    # Check if knowledge graph functionality is enabled (matching original behavior)
+    knowledge_graph_enabled = os.getenv("USE_KNOWLEDGE_GRAPH", "false") == "true"
+
+    if knowledge_graph_enabled:
+        neo4j_uri = os.getenv("NEO4J_URI")
+        neo4j_user = os.getenv("NEO4J_USER")
+        neo4j_password = os.getenv("NEO4J_PASSWORD")
+
+        if neo4j_uri and neo4j_user and neo4j_password:
+            try:
+                print("Connecting to Neo4j...")
+                neo4j_driver = AsyncGraphDatabase.driver(
+                    neo4j_uri,
+                    auth=(neo4j_user, neo4j_password)
+                )
+                # Test connection
+                async with neo4j_driver.session() as session:
+                    await session.run("RETURN 1")
+                print("✓ Neo4j driver initialized")
+
+                # Initialize Neo4j services
+                print("Initializing Neo4j services...")
+
+                from src.services.hallucination_detector import HallucinationDetectorService
+                from src.services.knowledge_graph import KnowledgeGraphService
+                from src.services.neo4j_parser import Neo4jParserService
+
+                # Create and initialize services
+                hallucination_detector_service = HallucinationDetectorService(neo4j_driver, settings)
+                await hallucination_detector_service.initialize()
+                print("✓ Hallucination detector service initialized")
+
+                knowledge_graph_service = KnowledgeGraphService(neo4j_driver, settings)
+                await knowledge_graph_service.initialize()
+                print("✓ Knowledge graph service initialized")
+
+                neo4j_parser_service = Neo4jParserService(neo4j_driver, settings)
+                await neo4j_parser_service.initialize()
+                print("✓ Neo4j parser service initialized")
+
+            except Exception as e:
+                print(f"Warning: Could not connect to Neo4j or initialize services: {e}")
+                print("Knowledge graph tools will be unavailable")
+                neo4j_driver = None
+                hallucination_detector_service = None
+                knowledge_graph_service = None
+                neo4j_parser_service = None
+        else:
+            print("Neo4j credentials not configured - knowledge graph tools will be unavailable")
+    else:
+        print("Knowledge graph functionality disabled - set USE_KNOWLEDGE_GRAPH=true to enable")
 
     # Initialize AsyncWebCrawler
     async with AsyncWebCrawler(
@@ -107,13 +186,28 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[Crawl4AIContext]:
     ) as crawler:
         print("✓ Crawl4AI AsyncWebCrawler initialized")
 
+        # Initialize web crawling service (depends on crawler)
+        from src.services.web_crawling import WebCrawlingService
+        web_crawling_service = WebCrawlingService(crawler, settings)
+        print("✓ Web crawling service initialized")
+
         # Create context
         context = Crawl4AIContext(
             crawler=crawler,
             supabase_client=supabase_client,
             reranking_model=reranking_model,
             neo4j_driver=neo4j_driver,
-            settings=settings
+            settings=settings,
+            database_service=database_service,
+            embedding_service=embedding_service,
+            search_service=search_service,
+            web_crawling_service=web_crawling_service,
+            directory_ingestion_service=directory_ingestion_service,
+            source_management_service=source_management_service,
+            temporary_analysis_service=temporary_analysis_service,
+            hallucination_detector_service=hallucination_detector_service,
+            knowledge_graph_service=knowledge_graph_service,
+            neo4j_parser_service=neo4j_parser_service
         )
 
         try:
@@ -121,6 +215,28 @@ async def crawl4ai_lifespan(server: FastMCP) -> AsyncIterator[Crawl4AIContext]:
         finally:
             # Cleanup
             print("🧹 Cleaning up resources...")
+
+            # Close Neo4j services
+            if hallucination_detector_service:
+                try:
+                    await hallucination_detector_service.close()
+                    print("✓ Hallucination detector service closed")
+                except Exception as e:
+                    print(f"Error closing hallucination detector service: {e}")
+
+            if knowledge_graph_service:
+                try:
+                    await knowledge_graph_service.close()
+                    print("✓ Knowledge graph service closed")
+                except Exception as e:
+                    print(f"Error closing knowledge graph service: {e}")
+
+            if neo4j_parser_service:
+                try:
+                    await neo4j_parser_service.close()
+                    print("✓ Neo4j parser service closed")
+                except Exception as e:
+                    print(f"Error closing neo4j parser service: {e}")
 
             if neo4j_driver:
                 try:
