@@ -35,21 +35,18 @@ async def cleanup_source(ctx: Context, source_id: str, confirm: bool = False) ->
                 "source_id": source_id,
                 "error": "Confirmation required. Set confirm=True to proceed with deletion."
             }, indent=2)
-        
-        # Get Supabase client from context
-        supabase_client = ctx.request_context.lifespan_context.supabase_client
-        
-        # Create service
-        service = SourceManagementService(supabase_client, ctx.request_context.lifespan_context.settings)
-        
+
+        # Get source management service from context
+        service = ctx.request_context.lifespan_context.source_management_service
+
         # Create request
         request = SourceCleanupRequest(source_id=source_id, confirm=confirm)
-        
+
         # Process request
         result = await service.cleanup_source(request)
-        
+
         return json.dumps(result, indent=2)
-        
+
     except Exception as e:
         return json.dumps({
             "success": False,
@@ -71,17 +68,14 @@ async def analyze_crawl_types(ctx: Context) -> str:
         JSON string with crawl type analysis for each source
     """
     try:
-        # Get Supabase client from context
-        supabase_client = ctx.request_context.lifespan_context.supabase_client
-        
-        # Create service
-        service = SourceManagementService(supabase_client, ctx.request_context.lifespan_context.settings)
-        
+        # Get source management service from context
+        service = ctx.request_context.lifespan_context.source_management_service
+
         # Process request
         result = await service.analyze_crawl_types()
-        
+
         return json.dumps(result, indent=2)
-        
+
     except Exception as e:
         return json.dumps({
             'success': False,
@@ -102,18 +96,15 @@ async def get_knowledge_base_guide(ctx: Context) -> str:
         JSON string with concise resource guide and usage instructions
     """
     try:
-        # Get Supabase client and Neo4j driver from context
-        supabase_client = ctx.request_context.lifespan_context.supabase_client
-        neo4j_driver = ctx.request_context.lifespan_context.neo4j_driver
-        
-        # Create service
-        service = SourceManagementService(supabase_client, ctx.request_context.lifespan_context.settings)
-        
+        # Get services from context
+        service = ctx.request_context.lifespan_context.source_management_service
+        knowledge_graph_service = ctx.request_context.lifespan_context.knowledge_graph_service
+
         # Process request
-        result = await service.get_knowledge_base_guide(neo4j_driver)
-        
+        result = await service.get_knowledge_base_guide(knowledge_graph_service)
+
         return json.dumps(result, indent=2)
-        
+
     except Exception as e:
         return json.dumps({
             "success": False,
@@ -139,17 +130,14 @@ async def get_available_sources(ctx: Context) -> str:
         JSON string with available sources
     """
     try:
-        # Get Supabase client from context
-        supabase_client = ctx.request_context.lifespan_context.supabase_client
-        
-        # Create service
-        service = SourceManagementService(supabase_client, ctx.request_context.lifespan_context.settings)
-        
+        # Get source management service from context
+        service = ctx.request_context.lifespan_context.source_management_service
+
         # Process request
         result = await service.get_available_sources()
-        
+
         return json.dumps(result, indent=2)
-        
+
     except Exception as e:
         return json.dumps({
             "success": False,
