@@ -129,5 +129,19 @@ class Crawl4AIContext(BaseModel):
     neo4j_driver: Optional[Any] = Field(None, description="Neo4j async driver")
     settings: Any = Field(..., description="Application settings")
 
+    # Core services (initialized once during startup)
+    database_service: Any = Field(..., description="Database service for Supabase operations")
+    embedding_service: Any = Field(..., description="Embedding service for vector operations")
+    search_service: Any = Field(..., description="Search service for RAG operations")
+    web_crawling_service: Any = Field(..., description="Web crawling service")
+    directory_ingestion_service: Any = Field(..., description="Directory ingestion service")
+    source_management_service: Any = Field(..., description="Source management service")
+    temporary_analysis_service: Any = Field(..., description="Temporary analysis service")
+
+    # Neo4j services (initialized once during startup if Neo4j is available)
+    hallucination_detector_service: Optional[Any] = Field(None, description="Hallucination detector service")
+    knowledge_graph_service: Optional[Any] = Field(None, description="Knowledge graph service")
+    neo4j_parser_service: Optional[Any] = Field(None, description="Neo4j parser service")
+
     class Config:
         arbitrary_types_allowed = True
