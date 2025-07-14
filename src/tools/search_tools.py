@@ -7,8 +7,6 @@ RAG queries and code example searches.
 import json
 
 from mcp.server.fastmcp import Context
-
-from src.models import SearchRequest
 from src.services.rag_search import SearchService
 
 
@@ -30,29 +28,18 @@ async def perform_rag_query(ctx: Context, query: str, source: str = None, match_
         JSON string with search results
     """
     try:
-        # Get dependencies from context
-        supabase_client = ctx.request_context.lifespan_context.supabase_client
-        embedding_service = ctx.request_context.lifespan_context.embedding_service
-        
-        # Create service
-        service = SearchService(
-            supabase_client,
-            embedding_service,
-            ctx.request_context.lifespan_context.settings
-        )
-        
-        # Create request
-        request = SearchRequest(
+        # Get search service from context
+        service = ctx.request_context.lifespan_context.search_service
+
+        # Process request directly with service
+        result = service.search_documents(
             query=query,
-            source=source,
-            match_count=match_count
+            match_count=match_count,
+            source_filter=source
         )
-        
-        # Process request
-        result = await service.perform_rag_query(request)
-        
+
         return json.dumps(result, indent=2)
-        
+
     except Exception as e:
         return json.dumps({
             "success": False,
@@ -81,29 +68,18 @@ async def search_code_examples(ctx: Context, query: str, source_id: str = None, 
         JSON string with code example search results
     """
     try:
-        # Get dependencies from context
-        supabase_client = ctx.request_context.lifespan_context.supabase_client
-        embedding_service = ctx.request_context.lifespan_context.embedding_service
-        
-        # Create service
-        service = SearchService(
-            supabase_client,
-            embedding_service,
-            ctx.request_context.lifespan_context.settings
-        )
-        
-        # Create request
-        request = SearchRequest(
+        # Get search service from context
+        service = ctx.request_context.lifespan_context.search_service
+
+        # Process request directly with service
+        result = service.search_code_examples(
             query=query,
-            source=source_id,
-            match_count=match_count
+            match_count=match_count,
+            source_filter=source_id
         )
-        
-        # Process request
-        result = await service.search_code_examples(request)
-        
+
         return json.dumps(result, indent=2)
-        
+
     except Exception as e:
         return json.dumps({
             "success": False,
