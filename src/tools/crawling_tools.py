@@ -27,12 +27,9 @@ async def crawl_single_page(ctx: Context, url: str) -> str:
         JSON string with crawl results
     """
     try:
-        # Get crawler from context
-        crawler = ctx.request_context.lifespan_context.crawler
-        
-        # Create service
-        service = WebCrawlingService(crawler, ctx.request_context.lifespan_context.settings)
-        
+        # Get web crawling service from context
+        service = ctx.request_context.lifespan_context.web_crawling_service
+
         # Create request
         request = CrawlRequest(
             url=url,
@@ -40,10 +37,10 @@ async def crawl_single_page(ctx: Context, url: str) -> str:
             max_concurrent=1,
             chunk_size=5000
         )
-        
+
         # Process request
         result = await service.process_crawl_request(request)
-        
+
         # Convert to dictionary for JSON serialization
         result_dict = {
             "success": result.success,
@@ -53,12 +50,12 @@ async def crawl_single_page(ctx: Context, url: str) -> str:
             "chunks_stored": result.chunks_stored,
             "code_examples_stored": result.code_examples_stored
         }
-        
+
         if not result.success:
             result_dict["error"] = result.error
-        
+
         return json.dumps(result_dict, indent=2)
-        
+
     except Exception as e:
         return json.dumps({
             "success": False,
@@ -89,12 +86,9 @@ async def smart_crawl_url(ctx: Context, url: str, max_depth: int = 3, max_concur
         JSON string with crawl results
     """
     try:
-        # Get crawler from context
-        crawler = ctx.request_context.lifespan_context.crawler
-        
-        # Create service
-        service = WebCrawlingService(crawler, ctx.request_context.lifespan_context.settings)
-        
+        # Get web crawling service from context
+        service = ctx.request_context.lifespan_context.web_crawling_service
+
         # Create request
         request = CrawlRequest(
             url=url,
@@ -102,10 +96,10 @@ async def smart_crawl_url(ctx: Context, url: str, max_depth: int = 3, max_concur
             max_concurrent=max_concurrent,
             chunk_size=chunk_size
         )
-        
+
         # Process request
         result = await service.process_crawl_request(request)
-        
+
         # Convert to dictionary for JSON serialization
         result_dict = {
             "success": result.success,
@@ -115,12 +109,12 @@ async def smart_crawl_url(ctx: Context, url: str, max_depth: int = 3, max_concur
             "chunks_stored": result.chunks_stored,
             "code_examples_stored": result.code_examples_stored
         }
-        
+
         if not result.success:
             result_dict["error"] = result.error
-        
+
         return json.dumps(result_dict, indent=2)
-        
+
     except Exception as e:
         return json.dumps({
             "success": False,
@@ -148,17 +142,9 @@ async def ingest_local_directory(ctx: Context, directory_path: str, source_name:
         JSON string with ingestion results
     """
     try:
-        # Get service from context
+        # Get directory ingestion service from context
         service = ctx.request_context.lifespan_context.directory_ingestion_service
-        
-        # If not available, create it
-        if not service:
-            from src.services.directory_ingestion import DirectoryIngestionService
-            service = DirectoryIngestionService(
-                ctx.request_context.lifespan_context.supabase_client,
-                ctx.request_context.lifespan_context.settings
-            )
-        
+
         # Process directory
         extensions = file_extensions.split(',')
         result = await service.ingest_directory(
@@ -168,9 +154,9 @@ async def ingest_local_directory(ctx: Context, directory_path: str, source_name:
             recursive=recursive,
             chunk_size=chunk_size
         )
-        
+
         return json.dumps(result, indent=2)
-        
+
     except Exception as e:
         return json.dumps({
             "success": False,
