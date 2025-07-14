@@ -38,25 +38,25 @@ async def check_ai_script_hallucinations(ctx: Context, script_path: str) -> str:
         JSON string with hallucination detection results
     """
     try:
-        # Get Neo4j driver from context
-        neo4j_driver = ctx.request_context.lifespan_context.neo4j_driver
-        
-        # Create service
-        service = HallucinationDetectorService(
-            neo4j_driver,
-            ctx.request_context.lifespan_context.settings
-        )
-        
+        # Get hallucination detector service from context
+        service = ctx.request_context.lifespan_context.hallucination_detector_service
+
+        if not service:
+            return json.dumps({
+                "success": False,
+                "error": "Knowledge graph functionality is not available. Ensure Neo4j is configured and USE_KNOWLEDGE_GRAPH=true is set."
+            }, indent=2)
+
         # Create request
         request = HallucinationDetectionRequest(
             script_path=Path(script_path),
             include_suggestions=True,
             confidence_threshold=0.5
         )
-        
+
         # Process request
         result = await service.detect_hallucinations(request)
-        
+
         # Convert to dictionary for JSON serialization
         result_dict = {
             "success": result.success,
@@ -66,12 +66,12 @@ async def check_ai_script_hallucinations(ctx: Context, script_path: str) -> str:
             "issues": result.issues,
             "recommendations": result.recommendations
         }
-        
+
         if not result.success and result.error:
             result_dict["error"] = result.error
-        
+
         return json.dumps(result_dict, indent=2)
-        
+
     except Exception as e:
         return json.dumps({
             "success": False,
@@ -108,67 +108,67 @@ async def query_knowledge_graph(ctx: Context, command: str) -> str:
         JSON string with query results
     """
     try:
-        # Get Neo4j driver from context
-        neo4j_driver = ctx.request_context.lifespan_context.neo4j_driver
-        
-        # Create service
-        service = KnowledgeGraphService(
-            neo4j_driver,
-            ctx.request_context.lifespan_context.settings
-        )
-        
+        # Get knowledge graph service from context
+        service = ctx.request_context.lifespan_context.knowledge_graph_service
+
+        if not service:
+            return json.dumps({
+                "success": False,
+                "error": "Knowledge graph functionality is not available. Ensure Neo4j is configured and USE_KNOWLEDGE_GRAPH=true is set."
+            }, indent=2)
+
         # Parse command
         parts = command.strip().split()
         cmd = parts[0].lower()
         args = parts[1:] if len(parts) > 1 else []
-        
+
         result = {"success": True}
-        
+
         # Process command
         if cmd == "repos":
             repositories = await service.list_repositories()
             result["repositories"] = repositories
-            
+
         elif cmd == "classes" and args:
             repo_name = args[0]
             classes = await service.list_classes(repo_name)
             result["classes"] = classes
             result["repository"] = repo_name
-            
+
         elif cmd == "methods" and args:
             class_name = args[0]
             methods = await service.get_methods_of_class(class_name)
             result["methods"] = methods
             result["class"] = class_name
-            
+
         elif cmd == "class" and args:
             class_name = args[0]
             class_info = await service.explore_class(class_name)
             result["class_info"] = class_info
-            
+
         elif cmd == "method" and args:
             method_name = args[0]
             class_name = args[1] if len(args) > 1 else None
             methods = await service.search_method(method_name, class_name)
             result["methods"] = methods
             result["search_term"] = method_name
-            
+
         elif cmd == "search" and args:
             search_term = args[0]
             # Custom search implementation
             classes = await service.list_classes(limit=100)
             matching_classes = [c for c in classes if search_term.lower() in c["name"].lower()]
             result["matching_classes"] = matching_classes
-            
+
             methods = []
             for cls in matching_classes[:5]:  # Limit to avoid too many queries
                 cls_methods = await service.get_methods_of_class(cls["name"])
                 methods.extend(cls_methods)
-            
+
             matching_methods = [m for m in methods if search_term.lower() in m["method_name"].lower()]
             result["matching_methods"] = matching_methods
             result["search_term"] = search_term
-            
+
         else:
             result = {
                 "success": False,
@@ -178,9 +178,9 @@ async def query_knowledge_graph(ctx: Context, command: str) -> str:
                     "class [class_name]", "method [method_name]", "search [query]"
                 ]
             }
-        
+
         return json.dumps(result, indent=2)
-        
+
     except Exception as e:
         return json.dumps({
             "success": False,
@@ -211,20 +211,20 @@ async def parse_github_repository(ctx: Context, repo_url: str) -> str:
         JSON string with parsing results
     """
     try:
-        # Get Neo4j driver from context
-        neo4j_driver = ctx.request_context.lifespan_context.neo4j_driver
-        
-        # Create service
-        service = Neo4jParserService(
-            neo4j_driver,
-            ctx.request_context.lifespan_context.settings
-        )
-        
+        # Get Neo4j parser service from context
+        service = ctx.request_context.lifespan_context.neo4j_parser_service
+
+        if not service:
+            return json.dumps({
+                "success": False,
+                "error": "Knowledge graph functionality is not available. Ensure Neo4j is configured and USE_KNOWLEDGE_GRAPH=true is set."
+            }, indent=2)
+
         # Process request
         result = await service.parse_repository(repo_url)
-        
+
         return json.dumps(result, indent=2)
-        
+
     except Exception as e:
         return json.dumps({
             "success": False,
