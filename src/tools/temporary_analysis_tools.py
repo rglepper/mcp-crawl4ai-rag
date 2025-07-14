@@ -32,20 +32,20 @@ async def analyze_repository_temporarily(ctx: Context, repo_url: str, focus_area
         JSON string with analysis results and analysis_id for future searches
     """
     try:
-        # Create service
-        service = TemporaryAnalysisService(ctx.request_context.lifespan_context.settings)
-        
+        # Get temporary analysis service from context
+        service = ctx.request_context.lifespan_context.temporary_analysis_service
+
         # Create request
         request = TemporaryAnalysisRequest(
             repo_url=repo_url,
             focus_areas=focus_areas.split(',') if focus_areas else None
         )
-        
+
         # Process request
         result = await service.analyze_repository_temporarily(request)
-        
+
         return json.dumps(result, indent=2)
-        
+
     except Exception as e:
         return json.dumps({
             "success": False,
@@ -71,21 +71,21 @@ async def search_temporary_analysis(ctx: Context, analysis_id: str, search_query
         JSON string with search results
     """
     try:
-        # Create service
-        service = TemporaryAnalysisService(ctx.request_context.lifespan_context.settings)
-        
+        # Get temporary analysis service from context
+        service = ctx.request_context.lifespan_context.temporary_analysis_service
+
         # Create request
         request = TemporaryAnalysisSearchRequest(
             analysis_id=analysis_id,
             search_query=search_query,
             search_type=search_type
         )
-        
+
         # Process request
         result = await service.search_temporary_analysis(request)
-        
+
         return json.dumps(result, indent=2)
-        
+
     except Exception as e:
         return json.dumps({
             "success": False,
@@ -109,14 +109,14 @@ async def list_temporary_analyses(ctx: Context) -> str:
         JSON string with list of available analyses
     """
     try:
-        # Create service
-        service = TemporaryAnalysisService(ctx.request_context.lifespan_context.settings)
-        
+        # Get temporary analysis service from context
+        service = ctx.request_context.lifespan_context.temporary_analysis_service
+
         # Process request
         result = await service.list_temporary_analyses()
-        
+
         return json.dumps(result, indent=2)
-        
+
     except Exception as e:
         return json.dumps({
             "success": False,
@@ -145,18 +145,18 @@ async def cleanup_temporary_analysis(ctx: Context, analysis_id: str = None, all_
                 "success": False,
                 "error": "Must specify either analysis_id or set all_analyses=True"
             }, indent=2)
-        
-        # Create service
-        service = TemporaryAnalysisService(ctx.request_context.lifespan_context.settings)
-        
+
+        # Get temporary analysis service from context
+        service = ctx.request_context.lifespan_context.temporary_analysis_service
+
         # Process request
         if all_analyses:
             result = await service.cleanup_all_temporary_analyses()
         else:
             result = await service.cleanup_temporary_analysis(analysis_id)
-        
+
         return json.dumps(result, indent=2)
-        
+
     except Exception as e:
         return json.dumps({
             "success": False,
