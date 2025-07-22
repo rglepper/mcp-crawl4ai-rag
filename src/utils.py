@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 import openai
 import re
 import time
-from src.llm_providers import get_llm_provider
+from llm_providers import get_llm_provider
 
 # Load OpenAI API key for embeddings
 openai.api_key = os.getenv("OPENAI_API_KEY")
