@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Read .project/rules/workflow.md for any development tasks
+Follow .project/rules/python-guidelines.md when writing Python code
+Follow .project/rules/unit-testing.md when writing tests
+
 ## Core Principles
 IMPORTANT: You MUST follow these principles in all code changes and PRP generations:
 
