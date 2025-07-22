@@ -347,20 +347,70 @@ class TestProviderFactory:
     
     def test_factory_returns_openai_provider_by_default(self):
         """Test that factory returns OpenAI provider when no config is set."""
-        # Will verify default behavior
-        pass
+        from src.llm_providers import get_llm_provider, OpenAIProvider
+        
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+            # Remove LLM_PROVIDER if set
+            os.environ.pop("LLM_PROVIDER", None)
+            
+            provider = get_llm_provider()
+            assert isinstance(provider, OpenAIProvider)
+            assert provider.name == "openai"
     
     def test_factory_returns_claude_code_provider_when_configured(self):
         """Test that factory returns Claude Code provider when configured."""
-        # Will verify LLM_PROVIDER=claude-code works
-        pass
+        from src.llm_providers import get_llm_provider, ClaudeCodeProvider
+        
+        with patch.dict(os.environ, {"LLM_PROVIDER": "claude-code"}):
+            with patch("shutil.which") as mock_which:
+                mock_which.return_value = "/usr/local/bin/claude"
+                
+                provider = get_llm_provider()
+                assert isinstance(provider, ClaudeCodeProvider)
+                assert provider.name == "claude-code"
     
     def test_factory_falls_back_to_openai_if_claude_not_available(self):
         """Test fallback behavior when Claude Code is not available."""
-        # Will verify graceful fallback with warning
-        pass
+        from src.llm_providers import get_llm_provider, OpenAIProvider
+        
+        with patch.dict(os.environ, {"LLM_PROVIDER": "claude-code", "OPENAI_API_KEY": "test-key"}):
+            with patch("shutil.which") as mock_which:
+                mock_which.return_value = None  # Claude not found
+                
+                # Mock Path operations to ensure claude is not found
+                from pathlib import Path
+                with patch.object(Path, "exists", return_value=False):
+                    # Capture logs to verify warning
+                    with patch("src.llm_providers.logger") as mock_logger:
+                        provider = get_llm_provider()
+                        
+                        # Should fall back to OpenAI
+                        assert isinstance(provider, OpenAIProvider)
+                        assert provider.name == "openai"
+                        
+                        # Should log warning about fallback
+                        mock_logger.warning.assert_called_once()
+                        warning_msg = mock_logger.warning.call_args[0][0]
+                        assert "Claude Code CLI not found" in warning_msg
+                        assert "falling back to OpenAI" in warning_msg
     
     def test_factory_raises_error_for_unknown_provider(self):
         """Test that factory raises error for unknown provider names."""
-        # Will verify proper error handling
-        pass
+        from src.llm_providers import get_llm_provider
+        
+        with patch.dict(os.environ, {"LLM_PROVIDER": "unknown-provider"}):
+            with pytest.raises(ValueError) as exc_info:
+                get_llm_provider()
+            
+            assert "Unknown LLM provider: unknown-provider" in str(exc_info.value)
+    
+    def test_factory_raises_error_if_openai_not_available(self):
+        """Test that factory raises error if OpenAI API key is not set."""
+        from src.llm_providers import get_llm_provider
+        
+        with patch.dict(os.environ, {}, clear=True):
+            # No API key set
+            with pytest.raises(RuntimeError) as exc_info:
+                get_llm_provider()
+            
+            assert "OpenAI API key not configured" in str(exc_info.value)
