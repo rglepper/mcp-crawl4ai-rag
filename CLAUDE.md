@@ -6,6 +6,15 @@ Read .project/rules/workflow.md for any development tasks
 Follow .project/rules/python-guidelines.md when writing Python code
 Follow .project/rules/unit-testing.md when writing tests
 
+## Commit Message Guidelines
+- Write clear, descriptive commit messages using conventional commits format.
+- Don't mention tests in the commit message, only in the body.
+- Always explain the implementation (not the tests) in commit messages
+- Describe what was added/changed
+- Explain why you chose to implement it this way (what were your logical reasoning steps that lead you to make the decisions you made, and what options you considered)
+- Detail how the implementation works (provide the logic behind the code)
+- Reference the example in .project/rules/workflow.md
+
 ## Core Principles
 IMPORTANT: You MUST follow these principles in all code changes and PRP generations:
 
