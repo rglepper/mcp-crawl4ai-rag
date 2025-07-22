@@ -52,21 +52,21 @@ class GraphitiSearchResult(BaseModel):
 @graphiti_agent.tool
 async def search_graphiti(ctx: RunContext[GraphitiDependencies], query: str) -> List[GraphitiSearchResult]:
     """Search the Graphiti knowledge graph with the given query.
-    
+
     Args:
         ctx: The run context containing dependencies
         query: The search query to find information in the knowledge graph
-        
+
     Returns:
         A list of search results containing facts that match the query
     """
     # Access the Graphiti client from dependencies
     graphiti = ctx.deps.graphiti_client
-    
+
     try:
         # Perform the search
         results = await graphiti.search(query)
-        
+
         # Format the results
         formatted_results = []
         for result in results:
@@ -75,15 +75,15 @@ async def search_graphiti(ctx: RunContext[GraphitiDependencies], query: str) -> 
                 fact=result.fact,
                 source_node_uuid=result.source_node_uuid if hasattr(result, 'source_node_uuid') else None
             )
-            
+
             # Add temporal information if available
             if hasattr(result, 'valid_at') and result.valid_at:
                 formatted_result.valid_at = str(result.valid_at)
             if hasattr(result, 'invalid_at') and result.invalid_at:
                 formatted_result.invalid_at = str(result.invalid_at)
-            
+
             formatted_results.append(formatted_result)
-        
+
         return formatted_results
     except Exception as e:
         # Log the error but don't close the connection since it's managed by the dependency
@@ -97,13 +97,13 @@ async def main():
     print("Enter 'exit' to quit the program.")
 
     # Neo4j connection parameters
-    neo4j_uri = os.environ.get('NEO4J_URI', 'bolt://localhost:7687')
+    neo4j_uri = os.environ.get('NEO4J_URI', 'bolt://localhost:7689')
     neo4j_user = os.environ.get('NEO4J_USER', 'neo4j')
     neo4j_password = os.environ.get('NEO4J_PASSWORD', 'password')
-    
+
     # Initialize Graphiti with Neo4j connection
     graphiti_client = Graphiti(neo4j_uri, neo4j_user, neo4j_password)
-    
+
     # Initialize the graph database with graphiti's indices if needed
     try:
         await graphiti_client.build_indices_and_constraints()
@@ -114,24 +114,24 @@ async def main():
 
     console = Console()
     messages = []
-    
+
     try:
         while True:
             # Get user input
             user_input = input("\n[You] ")
-            
+
             # Check if user wants to exit
             if user_input.lower() in ['exit', 'quit', 'bye', 'goodbye']:
                 print("Goodbye!")
                 break
-            
+
             try:
                 # Process the user input and output the response
                 print("\n[Assistant]")
                 with Live('', console=console, vertical_overflow='visible') as live:
                     # Pass the Graphiti client as a dependency
                     deps = GraphitiDependencies(graphiti_client=graphiti_client)
-                    
+
                     async with graphiti_agent.run_a_stream(
                         user_input, message_history=messages, deps=deps
                     ) as result:
@@ -139,10 +139,10 @@ async def main():
                         async for message in result.stream_text(delta=True):
                             curr_message += message
                             live.update(Markdown(curr_message))
-                    
+
                     # Add the new messages to the chat history
                     messages.extend(result.all_messages())
-                
+
             except Exception as e:
                 print(f"\n[Error] An error occurred: {str(e)}")
     finally:
