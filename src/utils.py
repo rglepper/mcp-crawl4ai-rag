@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 import openai
 import re
 import time
+from src.llm_providers import get_llm_provider
 
 # Load OpenAI API key for embeddings
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -99,7 +100,7 @@ def create_embedding(text: str) -> List[float]:
         # Return empty embedding if there's an error
         return [0.0] * 1536
 
-def generate_contextual_embedding(full_document: str, chunk: str) -> Tuple[str, bool]:
+async def generate_contextual_embedding(full_document: str, chunk: str) -> Tuple[str, bool]:
     """
     Generate contextual information for a chunk within a document to improve retrieval.
     
@@ -112,6 +113,10 @@ def generate_contextual_embedding(full_document: str, chunk: str) -> Tuple[str, 
         - The contextual text that situates the chunk within the document
         - Boolean indicating if contextual embedding was performed
     """
+    # Check if contextual embeddings are enabled
+    if os.getenv("USE_CONTEXTUAL_EMBEDDINGS", "false").lower() != "true":
+        return chunk, False
+    
     model_choice = os.getenv("MODEL_CHOICE")
     
     try:
@@ -125,19 +130,17 @@ Here is the chunk we want to situate within the whole document
 </chunk> 
 Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else."""
 
-        # Call the OpenAI API to generate contextual information
-        response = openai.chat.completions.create(
-            model=model_choice,
+        # Get the configured LLM provider and call it
+        provider = get_llm_provider()
+        context = await provider.chat_completion(
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that provides concise contextual information."},
                 {"role": "user", "content": prompt}
             ],
+            model=model_choice,
             temperature=0.3,
             max_tokens=200
         )
-        
-        # Extract the generated context
-        context = response.choices[0].message.content.strip()
         
         # Combine the context with the original chunk
         contextual_text = f"{context}\n---\n{chunk}"
@@ -437,7 +440,7 @@ def extract_code_blocks(markdown_content: str, min_length: int = 1000) -> List[D
     return code_blocks
 
 
-def generate_code_example_summary(code: str, context_before: str, context_after: str) -> str:
+async def generate_code_example_summary(code: str, context_before: str, context_after: str) -> str:
     """
     Generate a summary for a code example using its surrounding context.
     
@@ -468,17 +471,19 @@ Based on the code example and its surrounding context, provide a concise summary
 """
     
     try:
-        response = openai.chat.completions.create(
-            model=model_choice,
+        # Get the configured LLM provider and call it
+        provider = get_llm_provider()
+        response = await provider.chat_completion(
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that provides concise code example summaries."},
                 {"role": "user", "content": prompt}
             ],
+            model=model_choice,
             temperature=0.3,
             max_tokens=100
         )
         
-        return response.choices[0].message.content.strip()
+        return response
     
     except Exception as e:
         print(f"Error generating code example summary: {e}")
@@ -627,7 +632,7 @@ def update_source_info(client: Client, source_id: str, summary: str, word_count:
         print(f"Error updating source {source_id}: {e}")
 
 
-def extract_source_summary(source_id: str, content: str, max_length: int = 500) -> str:
+async def extract_source_summary(source_id: str, content: str, max_length: int = 500) -> str:
     """
     Extract a summary for a source from its content using an LLM.
     
@@ -662,19 +667,17 @@ The above content is from the documentation for '{source_id}'. Please provide a 
 """
     
     try:
-        # Call the OpenAI API to generate the summary
-        response = openai.chat.completions.create(
-            model=model_choice,
+        # Get the configured LLM provider and call it
+        provider = get_llm_provider()
+        summary = await provider.chat_completion(
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that provides concise library/tool/framework summaries."},
                 {"role": "user", "content": prompt}
             ],
+            model=model_choice,
             temperature=0.3,
             max_tokens=150
         )
-        
-        # Extract the generated summary
-        summary = response.choices[0].message.content.strip()
         
         # Ensure the summary is not too long
         if len(summary) > max_length:
