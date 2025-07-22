@@ -175,6 +175,39 @@ Alternatively, install Neo4j directly:
    - Username: `neo4j` (default)
    - Password: Whatever you set during creation
 
+## LLM Provider Options
+
+This MCP server supports two LLM providers for generating summaries and contextual embeddings:
+
+### OpenAI Provider (Default)
+- **Requirements**: OpenAI API key
+- **Models**: Any OpenAI chat model (gpt-4, gpt-3.5-turbo, etc.)
+- **Configuration**: Set `LLM_PROVIDER=openai` and `OPENAI_API_KEY`
+- **Best for**: Reliable, fast responses with consistent quality
+
+### Claude Code Provider
+- **Requirements**: [Claude Code CLI](https://claude.ai/code) installed locally
+- **Models**: `claude-code/sonnet`, `claude-code/opus`
+- **Configuration**: Set `LLM_PROVIDER=claude-code` and optionally `CLAUDE_CODE_MODEL`
+- **Best for**: Using your existing Claude Code subscription without additional API costs
+
+#### Setting up Claude Code Provider
+
+1. **Install Claude Code CLI** if not already installed
+2. **Verify installation**: Run `claude --version` in your terminal
+3. **Configure the provider**:
+   ```bash
+   LLM_PROVIDER=claude-code
+   CLAUDE_CODE_MODEL=claude-code/sonnet  # Optional, defaults to claude-code/sonnet
+   ```
+4. **Fallback behavior**: If Claude Code is not available, the server automatically falls back to OpenAI (if configured)
+
+**Note**: The server will search for the Claude CLI in common locations:
+- System PATH
+- `~/.claude/bin/claude`  
+- `~/node_modules/.bin/claude`
+- `~/.yarn/bin/claude`
+
 ## Configuration
 
 Create a `.env` file in the project root with the following variables:
@@ -185,11 +218,13 @@ HOST=0.0.0.0
 PORT=8051
 TRANSPORT=sse
 
-# OpenAI API Configuration
-OPENAI_API_KEY=your_openai_api_key
+# LLM Provider Configuration
+LLM_PROVIDER=openai                    # Options: "openai", "claude-code"
+OPENAI_API_KEY=your_openai_api_key     # Required when using OpenAI provider  
+CLAUDE_CODE_MODEL=claude-code/sonnet   # Model to use with Claude Code provider
 
 # LLM for summaries and contextual embeddings
-MODEL_CHOICE=gpt-4.1-nano
+MODEL_CHOICE=gpt-4.1-nano              # Model name to use (provider-specific)
 
 # RAG Strategies (set to "true" or "false", default to "false")
 USE_CONTEXTUAL_EMBEDDINGS=false

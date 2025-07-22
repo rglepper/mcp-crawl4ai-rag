@@ -48,9 +48,10 @@ This is a Python-based MCP (Model Context Protocol) server that provides web cra
 The codebase is organized as a single monolithic MCP server file with supporting utilities:
 
 1. **MCP Server (`src/crawl4ai_mcp.py`)** - Main FastMCP server with all tool implementations
-2. **Utilities (`src/utils.py`)** - Helper functions for embeddings, database operations, and search
-3. **Knowledge Graph Modules (`knowledge_graphs/`)** - Neo4j integration and AI hallucination detection
-4. **Runner Script (`run_mcp_server.py`)** - Python launcher for virtual environment management
+2. **LLM Providers (`src/llm_providers.py`)** - Abstraction layer for different LLM providers (OpenAI, Claude Code)
+3. **Utilities (`src/utils.py`)** - Helper functions for embeddings, database operations, and search
+4. **Knowledge Graph Modules (`knowledge_graphs/`)** - Neo4j integration and AI hallucination detection
+5. **Runner Script (`run_mcp_server.py`)** - Python launcher for virtual environment management
 
 ### Main Server File Structure
 
@@ -61,12 +62,22 @@ The `src/crawl4ai_mcp.py` file contains:
 - All 16 MCP tool implementations in a single file
 - FastMCP server initialization and lifespan management
 
+### LLM Provider Abstraction
+
+The `src/llm_providers.py` file provides:
+- `LLMProvider` - Abstract base class for all LLM providers
+- `OpenAIProvider` - OpenAI API integration with automatic retry logic
+- `ClaudeCodeProvider` - Claude Code CLI integration with subprocess management
+- `get_llm_provider()` - Factory function that returns the configured provider
+
 ### Utility Functions
 
 The `src/utils.py` file provides:
 - `get_supabase_client()` - Supabase client initialization
-- `create_embeddings_batch()` / `create_embedding()` - OpenAI embedding generation
-- `generate_contextual_embedding()` - LLM-enhanced chunk context (if enabled)
+- `create_embeddings_batch()` / `create_embedding()` - OpenAI embedding generation (always uses OpenAI)
+- `generate_contextual_embedding()` - LLM-enhanced chunk context using configured provider (async)
+- `generate_code_example_summary()` - Code example summarization using configured provider (async)
+- `extract_source_summary()` - Source content summarization using configured provider (async)
 - `add_documents_to_supabase()` - Document storage with chunking
 - `search_documents()` - Hybrid search implementation
 - `extract_code_blocks()` / `add_code_examples_to_supabase()` - Code example extraction
@@ -85,6 +96,7 @@ Located in `knowledge_graphs/` directory:
 ### Configuration System
 
 The system uses environment variables for configuration with these key settings:
+- LLM provider selection (`LLM_PROVIDER`, `CLAUDE_CODE_MODEL`)
 - RAG strategy toggles (`USE_CONTEXTUAL_EMBEDDINGS`, `USE_HYBRID_SEARCH`, `USE_AGENTIC_RAG`, `USE_RERANKING`, `USE_KNOWLEDGE_GRAPH`)
 - Database connections (Supabase, Neo4j)
 - API keys (OpenAI)
