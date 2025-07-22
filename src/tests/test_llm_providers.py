@@ -168,47 +168,178 @@ class TestClaudeCodeProvider:
     
     def test_claude_code_provider_name(self):
         """Test that Claude Code provider returns correct name."""
-        # Will implement after creating the provider
-        pass
+        from src.llm_providers import ClaudeCodeProvider
+        
+        provider = ClaudeCodeProvider()
+        assert provider.name == "claude-code"
     
     def test_claude_code_provider_finds_claude_cli_in_path(self):
         """Test that provider can find claude CLI in system PATH."""
-        # Will mock subprocess to check for claude command
-        pass
+        from src.llm_providers import ClaudeCodeProvider
+        
+        with patch("shutil.which") as mock_which:
+            mock_which.return_value = "/usr/local/bin/claude"
+            
+            provider = ClaudeCodeProvider()
+            assert provider.is_available() is True
+            assert str(provider.claude_path) == "/usr/local/bin/claude"
     
     def test_claude_code_provider_finds_claude_cli_in_common_locations(self):
         """Test that provider checks common installation locations."""
-        # Will verify it checks ~/.claude/bin/claude, etc.
-        pass
+        from src.llm_providers import ClaudeCodeProvider
+        from pathlib import Path
+        
+        with patch("shutil.which") as mock_which:
+            mock_which.return_value = None  # Not in PATH
+            
+            # Mock the specific path we want to find
+            test_path = Path.home() / ".claude" / "bin" / "claude"
+            
+            # Mock Path operations
+            original_exists = Path.exists
+            original_is_file = Path.is_file
+            
+            def mock_exists(self):
+                if self == test_path:
+                    return True
+                return False
+            
+            def mock_is_file(self):
+                if self == test_path:
+                    return True
+                return False
+            
+            with patch.object(Path, "exists", mock_exists):
+                with patch.object(Path, "is_file", mock_is_file):
+                    provider = ClaudeCodeProvider()
+                    assert provider.is_available() is True
+                    assert str(provider.claude_path) == str(test_path)
     
     def test_claude_code_provider_is_not_available_without_cli(self):
         """Test that provider is not available when CLI is not found."""
-        # Will verify it returns False when claude CLI is not found
-        pass
+        from src.llm_providers import ClaudeCodeProvider
+        from pathlib import Path
+        
+        with patch("shutil.which") as mock_which:
+            mock_which.return_value = None
+            
+            with patch.object(Path, "exists") as mock_exists:
+                mock_exists.return_value = False
+                
+                provider = ClaudeCodeProvider()
+                assert provider.is_available() is False
+                assert provider.claude_path is None
     
     @pytest.mark.asyncio
     async def test_claude_code_provider_chat_completion_success(self):
         """Test successful chat completion with Claude Code provider."""
-        # Will mock subprocess call to claude CLI
-        pass
+        from src.llm_providers import ClaudeCodeProvider
+        
+        with patch("shutil.which") as mock_which:
+            mock_which.return_value = "/usr/local/bin/claude"
+            
+            provider = ClaudeCodeProvider()
+            
+            # Mock subprocess
+            with patch("subprocess.Popen") as mock_popen:
+                mock_process = Mock()
+                mock_process.communicate.return_value = (
+                    '{"content": "Hello from Claude!"}',
+                    ""
+                )
+                mock_process.returncode = 0
+                mock_popen.return_value = mock_process
+                
+                messages = [{"role": "user", "content": "Hello"}]
+                result = await provider.chat_completion(
+                    messages=messages,
+                    model="claude-code/opus"
+                )
+                
+                assert result == "Hello from Claude!"
+                
+                # Verify command construction
+                call_args = mock_popen.call_args[0][0]
+                assert "/usr/local/bin/claude" in call_args
+                assert "--model" in call_args
+                assert "claude-code/opus" in call_args
+                assert "--no-interactive" in call_args
+                assert "--json-output" in call_args
     
     @pytest.mark.asyncio
     async def test_claude_code_provider_formats_messages_correctly(self):
         """Test that messages are formatted correctly for CLI."""
-        # Will verify message formatting for the CLI interface
-        pass
+        from src.llm_providers import ClaudeCodeProvider
+        
+        provider = ClaudeCodeProvider()
+        
+        messages = [
+            {"role": "system", "content": "You are helpful"},
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Hi there"},
+            {"role": "user", "content": "How are you?"}
+        ]
+        
+        formatted = provider._format_messages_for_cli(messages)
+        
+        expected = "System: You are helpful\n\nHuman: Hello\n\nAssistant: Hi there\n\nHuman: How are you?\n\nAssistant:"
+        assert formatted == expected
     
     @pytest.mark.asyncio
     async def test_claude_code_provider_handles_cli_errors(self):
         """Test error handling for CLI failures."""
-        # Will verify proper error handling for subprocess errors
-        pass
+        from src.llm_providers import ClaudeCodeProvider
+        
+        with patch("shutil.which") as mock_which:
+            mock_which.return_value = "/usr/local/bin/claude"
+            
+            provider = ClaudeCodeProvider()
+            
+            # Mock subprocess error
+            with patch("subprocess.Popen") as mock_popen:
+                mock_process = Mock()
+                mock_process.communicate.return_value = ("", "Error: Invalid model")
+                mock_process.returncode = 1
+                mock_popen.return_value = mock_process
+                
+                with pytest.raises(RuntimeError) as exc_info:
+                    await provider.chat_completion(
+                        messages=[{"role": "user", "content": "Hello"}],
+                        model="invalid-model"
+                    )
+                
+                assert "Claude Code CLI error" in str(exc_info.value)
+                assert "Invalid model" in str(exc_info.value)
     
     @pytest.mark.asyncio
-    async def test_claude_code_provider_respects_model_parameter(self):
-        """Test that provider uses the specified model."""
-        # Will verify --model parameter is passed correctly
-        pass
+    async def test_claude_code_provider_respects_temperature_and_max_tokens(self):
+        """Test that provider passes temperature and max_tokens correctly."""
+        from src.llm_providers import ClaudeCodeProvider
+        
+        with patch("shutil.which") as mock_which:
+            mock_which.return_value = "/usr/local/bin/claude"
+            
+            provider = ClaudeCodeProvider()
+            
+            with patch("subprocess.Popen") as mock_popen:
+                mock_process = Mock()
+                mock_process.communicate.return_value = ('{"content": "Response"}', "")
+                mock_process.returncode = 0
+                mock_popen.return_value = mock_process
+                
+                await provider.chat_completion(
+                    messages=[{"role": "user", "content": "Hello"}],
+                    model="claude-code/sonnet",
+                    temperature=0.7,
+                    max_tokens=500
+                )
+                
+                # Verify command includes temperature and max_tokens
+                call_args = mock_popen.call_args[0][0]
+                assert "--temperature" in call_args
+                assert "0.7" in call_args
+                assert "--max-tokens" in call_args
+                assert "500" in call_args
 
 
 class TestProviderFactory:
