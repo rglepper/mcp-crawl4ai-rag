@@ -1,5 +1,6 @@
 """Tests for LLM provider abstractions."""
 
+import os
 import pytest
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
@@ -74,36 +75,92 @@ class TestOpenAIProvider:
     
     def test_openai_provider_name(self):
         """Test that OpenAI provider returns correct name."""
-        # Will implement after creating the provider
-        pass
+        from src.llm_providers import OpenAIProvider
+        
+        provider = OpenAIProvider()
+        assert provider.name == "openai"
     
     def test_openai_provider_is_available_with_api_key(self):
         """Test that OpenAI provider is available when API key is set."""
-        # Will verify it checks for OPENAI_API_KEY environment variable
-        pass
+        from src.llm_providers import OpenAIProvider
+        
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key-123"}):
+            provider = OpenAIProvider()
+            assert provider.is_available() is True
     
     def test_openai_provider_is_not_available_without_api_key(self):
         """Test that OpenAI provider is not available without API key."""
-        # Will verify it returns False when no API key is set
-        pass
+        from src.llm_providers import OpenAIProvider
+        
+        with patch.dict(os.environ, {}, clear=True):
+            provider = OpenAIProvider()
+            assert provider.is_available() is False
     
     @pytest.mark.asyncio
     async def test_openai_provider_chat_completion_success(self, mock_openai_response):
         """Test successful chat completion with OpenAI provider."""
-        # Will test the chat completion method with mocked OpenAI client
-        pass
+        from src.llm_providers import OpenAIProvider
+        
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key-123"}):
+            provider = OpenAIProvider()
+            
+            # Mock the openai client
+            with patch("openai.chat.completions.create") as mock_create:
+                mock_create.return_value = mock_openai_response
+                
+                messages = [{"role": "user", "content": "Hello"}]
+                result = await provider.chat_completion(
+                    messages=messages,
+                    model="gpt-3.5-turbo",
+                    temperature=0.5,
+                    max_tokens=100
+                )
+                
+                assert result == "Test response"
+                mock_create.assert_called_once()
+                
+                # Verify call arguments
+                call_args = mock_create.call_args[1]
+                assert call_args["model"] == "gpt-3.5-turbo"
+                assert call_args["messages"] == messages
+                assert call_args["temperature"] == 0.5
+                assert call_args["max_tokens"] == 100
     
     @pytest.mark.asyncio
-    async def test_openai_provider_chat_completion_with_system_message(self):
-        """Test chat completion with system message."""
-        # Will verify system messages are properly handled
-        pass
+    async def test_openai_provider_chat_completion_without_api_key(self):
+        """Test chat completion fails without API key."""
+        from src.llm_providers import OpenAIProvider
+        
+        with patch.dict(os.environ, {}, clear=True):
+            provider = OpenAIProvider()
+            
+            with pytest.raises(RuntimeError) as exc_info:
+                await provider.chat_completion(
+                    messages=[{"role": "user", "content": "Hello"}],
+                    model="gpt-3.5-turbo"
+                )
+            
+            assert "OpenAI API key not configured" in str(exc_info.value)
     
     @pytest.mark.asyncio
     async def test_openai_provider_chat_completion_error_handling(self):
         """Test error handling in OpenAI provider."""
-        # Will verify proper error handling for API failures
-        pass
+        from src.llm_providers import OpenAIProvider
+        
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key-123"}):
+            provider = OpenAIProvider()
+            
+            # Mock API error
+            with patch("openai.chat.completions.create") as mock_create:
+                mock_create.side_effect = Exception("API Error: Rate limit exceeded")
+                
+                with pytest.raises(Exception) as exc_info:
+                    await provider.chat_completion(
+                        messages=[{"role": "user", "content": "Hello"}],
+                        model="gpt-3.5-turbo"
+                    )
+                
+                assert "API Error: Rate limit exceeded" in str(exc_info.value)
 
 
 class TestClaudeCodeProvider:
