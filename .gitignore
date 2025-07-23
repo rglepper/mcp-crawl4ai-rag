@@ -8,3 +8,4 @@ temp_analysis
 .augment
 test_script_hallucination*
 /repository-refactor-prp.md
+.mcp.json
